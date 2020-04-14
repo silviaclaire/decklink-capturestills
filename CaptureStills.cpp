@@ -41,6 +41,10 @@
 #include "DeckLinkAPI.h"
 #include "ImageWriter.h"
 
+
+#include "Stopwatch.h"
+
+
 // Pixel format tuple encoding {BMDPixelFormat enum, Pixel format display name}
 const std::vector<std::tuple<BMDPixelFormat, std::string>> kSupportedPixelFormats
 {
@@ -311,6 +315,10 @@ int main(int argc, char* argv[])
 	std::string					selectedDisplayModeName;
 	std::vector<std::string>	deckLinkDeviceNames;
 
+	win32::Stopwatch sw;
+
+	sw.Start();
+
 	// Initialize COM on this thread
 	result = CoInitializeEx(NULL, COINIT_MULTITHREADED);
 	if (FAILED(result))
@@ -513,30 +521,42 @@ int main(int argc, char* argv[])
 		goto bail;
 	}
 
+	sw.Stop();
+	fprintf(stderr, "Elapsed time (Initialization): %f ms\n", sw.ElapsedMilliseconds());
+
+	sw.Reset();
+	sw.Start();
+
 	// Start capturing
 	result = selectedDeckLinkInput->StartCapture(selectedDisplayMode, std::get<kPixelFormatValue>(kSupportedPixelFormats[pixelFormatIndex]), enableFormatDetection);
 	if (result != S_OK)
 		goto bail;
 
-	// Print the selected configuration
-	fprintf(stderr, "Capturing with the following configuration:\n"
-		" - Capture device: %s\n"
-		" - Video mode: %s\n"
-		" - Pixel format: %s\n"
-		" - Frames to capture: %d\n"
-		" - Capture interval: %d\n"
-		" - Filename prefix: %s\n"
-		" - Capture directory: %s\n",
-		selectedDeckLinkInput->GetDeviceName().c_str(),
-		selectedDisplayModeName.c_str(),
-		std::get<kPixelFormatString>(kSupportedPixelFormats[pixelFormatIndex]).c_str(),
-		framesToCapture,
-		captureInterval,
-		filenamePrefix.c_str(),
-		captureDirectory.c_str()
-		);
+	sw.Stop();
+	fprintf(stderr, "Elapsed time (StartCapture): %f ms\n", sw.ElapsedMilliseconds());
 
-	fprintf(stderr, "Starting capture, press <RETURN> to stop/exit\n");
+	sw.Reset();
+	sw.Start();
+
+	// Print the selected configuration
+	//fprintf(stderr, "Capturing with the following configuration:\n"
+	//	" - Capture device: %s\n"
+	//	" - Video mode: %s\n"
+	//	" - Pixel format: %s\n"
+	//	" - Frames to capture: %d\n"
+	//	" - Capture interval: %d\n"
+	//	" - Filename prefix: %s\n"
+	//	" - Capture directory: %s\n",
+	//	selectedDeckLinkInput->GetDeviceName().c_str(),
+	//	selectedDisplayModeName.c_str(),
+	//	std::get<kPixelFormatString>(kSupportedPixelFormats[pixelFormatIndex]).c_str(),
+	//	framesToCapture,
+	//	captureInterval,
+	//	filenamePrefix.c_str(),
+	//	captureDirectory.c_str()
+	//	);
+
+	//fprintf(stderr, "Starting capture, press <RETURN> to stop/exit\n");
 
 	// Start thread for capture processing
 	captureStillsThread = std::thread([&]{
@@ -551,6 +571,9 @@ int main(int argc, char* argv[])
 	// Wait on return of main capture stills thread
 	captureStillsThread.join();
 	selectedDeckLinkInput->StopCapture();
+
+	sw.Stop();
+	fprintf(stderr, "Elapsed time (CaptureStills): %f ms\n", sw.ElapsedMilliseconds());
 
 	keyPressThread.join();
 

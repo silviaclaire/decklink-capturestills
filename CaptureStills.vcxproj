@@ -161,6 +161,7 @@
     <ClInclude Include="DeckLinkInputDevice.h" />
     <ClInclude Include="ImageWriter.h" />
     <ClInclude Include="platform.h" />
+    <ClInclude Include="Stopwatch.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Bgra32VideoFrame.cpp" />
