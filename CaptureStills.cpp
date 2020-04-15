@@ -60,7 +60,7 @@ enum {
 };
 
 void CaptureStills(DeckLinkInputDevice* deckLinkInput, const int captureInterval, const int framesToCapture,
-				   const std::string& captureDirectory, const std::string& filenamePrefix)
+				   const std::string& captureDirectory, const std::string& filenamePrefix, const std::string& imageFormat)
 {
 	int							captureFrameCount		= 0;
 	HRESULT						result					= S_OK;
@@ -90,7 +90,7 @@ void CaptureStills(DeckLinkInputDevice* deckLinkInput, const int captureInterval
 		else if ((++captureFrameCount % captureInterval) == 0)
 		{
 			std::string outputFileName;
-			result = ImageWriter::GetNextFilenameWithPrefix(captureDirectory, filenamePrefix, outputFileName);
+			result = ImageWriter::GetNextFilenameWithPrefix(captureDirectory, filenamePrefix, imageFormat, outputFileName);
 			if (result != S_OK)
 			{
 				fprintf(stderr, "Unable to get filename\n");
@@ -118,7 +118,7 @@ void CaptureStills(DeckLinkInputDevice* deckLinkInput, const int captureInterval
 					}
 				}
 
-				result = ImageWriter::WriteBgra32VideoFrameToPNG(bgra32Frame, outputFileName);
+				result = ImageWriter::WriteBgra32VideoFrameToImage(bgra32Frame, outputFileName, imageFormat);
 				if (FAILED(result))
 				{
 					fprintf(stderr, "Image encoding to file was unsuccessful\n");
@@ -310,6 +310,7 @@ int main(int argc, char* argv[])
 	BMDDisplayMode				selectedDisplayMode		= bmdModeNTSC;
 	std::string					selectedDisplayModeName;
 	std::vector<std::string>	deckLinkDeviceNames;
+	std::string					imageFormat				= "png";
 
 	// Initialize COM on this thread
 	result = CoInitializeEx(NULL, COINIT_MULTITHREADED);
@@ -346,6 +347,9 @@ int main(int argc, char* argv[])
 
 		else if (strcmp(argv[i], "-f") == 0)
 			filenamePrefix = argv[++i];
+
+		else if (strcmp(argv[i], "-e") == 0)
+			imageFormat = argv[++i];
 
 		else if ((strcmp(argv[i], "?") == 0) || (strcmp(argv[i], "-h") == 0))
 			displayHelp = true;
@@ -540,7 +544,7 @@ int main(int argc, char* argv[])
 
 	// Start thread for capture processing
 	captureStillsThread = std::thread([&]{
-		CaptureStills(selectedDeckLinkInput, captureInterval, framesToCapture, captureDirectory, filenamePrefix);
+		CaptureStills(selectedDeckLinkInput, captureInterval, framesToCapture, captureDirectory, filenamePrefix, imageFormat);
 	});
 
 	keyPressThread = std::thread([&]{

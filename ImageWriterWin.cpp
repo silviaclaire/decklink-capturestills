@@ -57,7 +57,8 @@ HRESULT ImageWriter::UnInitialize()
 	return S_OK;
 }
 
-HRESULT ImageWriter::GetNextFilenameWithPrefix(const std::string& path, const std::string& prefix, std::string& nextFileName)
+HRESULT ImageWriter::GetNextFilenameWithPrefix(const std::string& path, const std::string& prefix,
+											   const std::string& extension, std::string& nextFileName)
 {
 	HRESULT result = E_FAIL;
 	static int idx = 0;
@@ -65,20 +66,20 @@ HRESULT ImageWriter::GetNextFilenameWithPrefix(const std::string& path, const st
 	while (idx < 10000)
 	{
 		CString	filename;
-		filename.Format(_T("%s\\%s%.4d.png"), CString(path.c_str()), CString(prefix.c_str()), idx++);
+		filename.Format(_T("%s\\%s%.4d.%s"), CString(path.c_str()), CString(prefix.c_str()), idx++, CString(extension.c_str()));
 
 		if (!PathFileExists(filename))
 		{
-			nextFileName = std::string(CT2CA(filename.GetString())); 
+			nextFileName = std::string(CT2CA(filename.GetString()));
 			result = S_OK;
 			break;
 		}
 	}
-	
+
 	return result;
 }
 
-HRESULT ImageWriter::WriteBgra32VideoFrameToPNG(IDeckLinkVideoFrame* bgra32VideoFrame, const std::string& pngFilename)
+HRESULT ImageWriter::WriteBgra32VideoFrameToImage(IDeckLinkVideoFrame* bgra32VideoFrame, const std::string& imgFilename, const std::string& imageFormat)
 {
 	HRESULT								result = S_OK;
 	void*								bgra32FrameBytes = NULL;
@@ -86,9 +87,9 @@ HRESULT ImageWriter::WriteBgra32VideoFrameToPNG(IDeckLinkVideoFrame* bgra32Video
 	IWICBitmapEncoder*					bitmapEncoder = NULL;
 	IWICBitmapFrameEncode*				bitmapFrame = NULL;
 	IWICStream*							fileStream = NULL;
-	WICPixelFormatGUID					pixelFormat = GUID_WICPixelFormat32bppBGRA;;
+	WICPixelFormatGUID					pixelFormat = GUID_WICPixelFormat32bppBGRA;
 
-	CString filename = pngFilename.c_str();
+	CString filename = imgFilename.c_str();
 
 	// Ensure video frame has expected pixel format
 	if (bgra32VideoFrame->GetPixelFormat() != bmdFormat8BitBGRA)
@@ -96,7 +97,7 @@ HRESULT ImageWriter::WriteBgra32VideoFrameToPNG(IDeckLinkVideoFrame* bgra32Video
 		fprintf(stderr, "Video frame is not in 8-Bit BGRA pixel format\n");
 		return E_FAIL;
 	}
-	
+
 	bgra32VideoFrame->GetBytes(&bgra32FrameBytes);
 	if (bgra32FrameBytes == NULL)
 	{
@@ -113,7 +114,20 @@ HRESULT ImageWriter::WriteBgra32VideoFrameToPNG(IDeckLinkVideoFrame* bgra32Video
 	if (FAILED(result))
 		goto bail;
 
-	result = g_wicFactory->CreateEncoder(GUID_ContainerFormatPng, NULL, &bitmapEncoder);
+	if (imageFormat == "bmp")
+	{
+		result = g_wicFactory->CreateEncoder(GUID_ContainerFormatBmp, NULL, &bitmapEncoder);
+		pixelFormat = GUID_WICPixelFormat32bppBGR;
+	}
+	else if (imageFormat == "png")
+	{
+		result = g_wicFactory->CreateEncoder(GUID_ContainerFormatPng, NULL, &bitmapEncoder);
+	}
+	else if (imageFormat == "tiff")
+	{
+		result = g_wicFactory->CreateEncoder(GUID_ContainerFormatTiff, NULL, &bitmapEncoder);
+	}
+
 	if (FAILED(result))
 		goto bail;
 
@@ -136,7 +150,7 @@ HRESULT ImageWriter::WriteBgra32VideoFrameToPNG(IDeckLinkVideoFrame* bgra32Video
 
 	// Bitmap pixel format WICPixelFormat32bppRGB will match Bgra32VideoFrame
 	result = bitmapFrame->SetPixelFormat(&pixelFormat);
-	if (FAILED(result) || (!IsEqualGUID(pixelFormat, GUID_WICPixelFormat32bppBGRA)))
+	if (FAILED(result))
 		// Unable to support 32-bit RGB
 		goto bail;
 
