@@ -180,7 +180,7 @@
     <ClCompile Include="platform.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <Midl Include="..\..\..\Win\include\DeckLinkAPI.idl">
+    <Midl Include="include\DeckLinkAPI.idl">
       <Filter>DeckLinkAPI</Filter>
     </Midl>
   </ItemGroup>
