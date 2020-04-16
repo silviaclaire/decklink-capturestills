@@ -156,6 +156,7 @@
     </Midl>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Bgr24VideoFrame.h" />
     <ClInclude Include="Bgra32VideoFrame.h" />
     <ClInclude Include="DeckLinkAPI.h" />
     <ClInclude Include="DeckLinkInputDevice.h" />
@@ -163,6 +164,7 @@
     <ClInclude Include="platform.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Bgr24VideoFrame.cpp" />
     <ClCompile Include="Bgra32VideoFrame.cpp" />
     <ClCompile Include="CaptureStills.cpp" />
     <ClCompile Include="DeckLinkAPI_i.c">

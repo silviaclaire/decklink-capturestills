@@ -1,4 +1,4 @@
-/* -LICENSE-START-
+﻿/* -LICENSE-START-
 ** Copyright (c) 2018 Blackmagic Design
 **
 ** Permission is hereby granted, free of charge, to any person or organization
@@ -25,19 +25,68 @@
 ** -LICENSE-END-
 */
 
-#pragma once
+#include "platform.h"
+#include "Bgr24VideoFrame.h"
 
-#include <wincodec.h>
-#include <string>
-#include <queue>
-#include <stdint.h>
-#include "DeckLinkAPI.h"
+/* Bgr24VideoFrame class */
 
-namespace ImageWriter
+// Constructor generates empty pixel buffer
+Bgr24VideoFrame::Bgr24VideoFrame(long width, long height, BMDFrameFlags flags) :
+	m_width(width), m_height(height), m_flags(flags), m_refCount(1)
 {
-	HRESULT Initialize(void);
-	HRESULT UnInitialize(void);
+	// Allocate pixel buffer
+	m_pixelBuffer.resize(m_width*m_height*3);
+}
 
-	HRESULT GetNextFilenameWithPrefix(const std::string& path, const std::string& filenamePrefix, const std::string& imageFormat, std::string& nextFileName);
-	HRESULT WriteVideoFrameToImage(IDeckLinkVideoFrame* videoFrame, const std::string& imgFilename, const std::string& imageFormat);
-};
+HRESULT Bgr24VideoFrame::GetBytes(void **buffer)
+{
+	*buffer = (void*)m_pixelBuffer.data();
+	return S_OK;
+}
+
+HRESULT	STDMETHODCALLTYPE Bgr24VideoFrame::QueryInterface(REFIID iid, LPVOID *ppv)
+{
+	HRESULT 		result = E_NOINTERFACE;
+
+	if (ppv == NULL)
+		return E_INVALIDARG;
+
+	// Initialise the return result
+	*ppv = NULL;
+
+	// Obtain the IUnknown interface and compare it the provided REFIID
+	if (iid == IID_IUnknown)
+	{
+		*ppv = this;
+		AddRef();
+		result = S_OK;
+	}
+
+	else if (iid == IID_IDeckLinkVideoFrame)
+	{
+		*ppv = (IDeckLinkVideoFrame*)this;
+		AddRef();
+		result = S_OK;
+	}
+
+	return result;
+}
+
+ULONG STDMETHODCALLTYPE Bgr24VideoFrame::AddRef(void)
+{
+	return m_refCount.fetch_add(1);
+}
+
+ULONG STDMETHODCALLTYPE Bgr24VideoFrame::Release(void)
+{
+	ULONG		newRefValue;
+
+	newRefValue = m_refCount.fetch_sub(1);
+	if (newRefValue == 0)
+	{
+		delete this;
+		return 0;
+	}
+
+	return newRefValue;
+}

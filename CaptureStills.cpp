@@ -36,6 +36,7 @@
 #include <vector>
 
 #include "platform.h"
+#include "Bgr24VideoFrame.h"
 #include "Bgra32VideoFrame.h"
 #include "DeckLinkInputDevice.h"
 #include "DeckLinkAPI.h"
@@ -68,7 +69,7 @@ void CaptureStills(DeckLinkInputDevice* deckLinkInput, const int captureInterval
 
 	IDeckLinkVideoFrame*		receivedVideoFrame		= NULL;
 	IDeckLinkVideoConversion*	deckLinkFrameConverter	= NULL;
-	IDeckLinkVideoFrame*		bgra32Frame				= NULL;
+	IDeckLinkVideoFrame*		videoFrame				= NULL;
 
 	// Create frame conversion instance
 	result = GetDeckLinkVideoConversion(&deckLinkFrameConverter);
@@ -103,29 +104,38 @@ void CaptureStills(DeckLinkInputDevice* deckLinkInput, const int captureInterval
 				if (receivedVideoFrame->GetPixelFormat() == bmdFormat8BitBGRA)
 				{
 					// Frame is already 8-bit BGRA - no conversion required
-					bgra32Frame = receivedVideoFrame;
-					bgra32Frame->AddRef();
+					videoFrame = receivedVideoFrame;
+					videoFrame->AddRef();
 				}
 				else
 				{
-					bgra32Frame = new Bgra32VideoFrame(receivedVideoFrame->GetWidth(), receivedVideoFrame->GetHeight(), receivedVideoFrame->GetFlags());
+					if (imageFormat == "jpeg")
+					{
+						// FIXME: Bgr24VideoFrame outputs incorrect images.
+						videoFrame = new Bgr24VideoFrame(receivedVideoFrame->GetWidth(), receivedVideoFrame->GetHeight(), receivedVideoFrame->GetFlags());
+					}
+					else
+					{
+						videoFrame = new Bgra32VideoFrame(receivedVideoFrame->GetWidth(), receivedVideoFrame->GetHeight(), receivedVideoFrame->GetFlags());
+					}
 
-					result = deckLinkFrameConverter->ConvertFrame(receivedVideoFrame, bgra32Frame);
+
+					result = deckLinkFrameConverter->ConvertFrame(receivedVideoFrame, videoFrame);
 					if (FAILED(result))
 					{
-						fprintf(stderr, "Frame conversion to BGRA was unsuccessful\n");
+						fprintf(stderr, "Frame conversion was unsuccessful\n");
 						captureRunning = false;
 					}
 				}
 
-				result = ImageWriter::WriteBgra32VideoFrameToImage(bgra32Frame, outputFileName, imageFormat);
+				result = ImageWriter::WriteVideoFrameToImage(videoFrame, outputFileName, imageFormat);
 				if (FAILED(result))
 				{
 					fprintf(stderr, "Image encoding to file was unsuccessful\n");
 					captureRunning = false;
 				}
 
-				bgra32Frame->Release();
+				videoFrame->Release();
 
 				if ((captureFrameCount / captureInterval) >= framesToCapture)
 				{

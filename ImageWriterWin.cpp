@@ -79,27 +79,27 @@ HRESULT ImageWriter::GetNextFilenameWithPrefix(const std::string& path, const st
 	return result;
 }
 
-HRESULT ImageWriter::WriteBgra32VideoFrameToImage(IDeckLinkVideoFrame* bgra32VideoFrame, const std::string& imgFilename, const std::string& imageFormat)
+HRESULT ImageWriter::WriteVideoFrameToImage(IDeckLinkVideoFrame* videoFrame, const std::string& imgFilename, const std::string& imageFormat)
 {
 	HRESULT								result = S_OK;
-	void*								bgra32FrameBytes = NULL;
+	void*								frameBytes = NULL;
 
 	IWICBitmapEncoder*					bitmapEncoder = NULL;
 	IWICBitmapFrameEncode*				bitmapFrame = NULL;
 	IWICStream*							fileStream = NULL;
-	WICPixelFormatGUID					pixelFormat = GUID_WICPixelFormat32bppBGRA;
+	WICPixelFormatGUID					pixelFormat;
 
 	CString filename = imgFilename.c_str();
 
 	// Ensure video frame has expected pixel format
-	if (bgra32VideoFrame->GetPixelFormat() != bmdFormat8BitBGRA)
+	if (videoFrame->GetPixelFormat() != bmdFormat8BitBGRA)
 	{
 		fprintf(stderr, "Video frame is not in 8-Bit BGRA pixel format\n");
 		return E_FAIL;
 	}
 
-	bgra32VideoFrame->GetBytes(&bgra32FrameBytes);
-	if (bgra32FrameBytes == NULL)
+	videoFrame->GetBytes(&frameBytes);
+	if (frameBytes == NULL)
 	{
 		fprintf(stderr, "Could not get DeckLinkVideoFrame buffer pointer\n");
 		result = E_OUTOFMEMORY;
@@ -122,10 +122,17 @@ HRESULT ImageWriter::WriteBgra32VideoFrameToImage(IDeckLinkVideoFrame* bgra32Vid
 	else if (imageFormat == "png")
 	{
 		result = g_wicFactory->CreateEncoder(GUID_ContainerFormatPng, NULL, &bitmapEncoder);
+		pixelFormat = GUID_WICPixelFormat32bppBGRA;
 	}
 	else if (imageFormat == "tiff")
 	{
 		result = g_wicFactory->CreateEncoder(GUID_ContainerFormatTiff, NULL, &bitmapEncoder);
+		pixelFormat = GUID_WICPixelFormat32bppBGRA;
+	}
+	else if (imageFormat == "jpeg")
+	{
+		result = g_wicFactory->CreateEncoder(GUID_ContainerFormatJpeg, NULL, &bitmapEncoder);
+		pixelFormat = GUID_WICPixelFormat24bppBGR;
 	}
 
 	if (FAILED(result))
@@ -144,18 +151,17 @@ HRESULT ImageWriter::WriteBgra32VideoFrameToImage(IDeckLinkVideoFrame* bgra32Vid
 		goto bail;
 
 	// Set bitmap frame size based on video frame
-	result = bitmapFrame->SetSize(bgra32VideoFrame->GetWidth(), bgra32VideoFrame->GetHeight());
+	result = bitmapFrame->SetSize(videoFrame->GetWidth(), videoFrame->GetHeight());
 	if (FAILED(result))
 		goto bail;
 
-	// Bitmap pixel format WICPixelFormat32bppRGB will match Bgra32VideoFrame
+	// Bitmap pixel format will match video frame
 	result = bitmapFrame->SetPixelFormat(&pixelFormat);
 	if (FAILED(result))
-		// Unable to support 32-bit RGB
 		goto bail;
 
 	// Write video buffer to bitmap
-	result = bitmapFrame->WritePixels(bgra32VideoFrame->GetHeight(), bgra32VideoFrame->GetRowBytes(), bgra32VideoFrame->GetHeight()*bgra32VideoFrame->GetRowBytes(), (BYTE*)bgra32FrameBytes);
+	result = bitmapFrame->WritePixels(videoFrame->GetHeight(), videoFrame->GetRowBytes(), videoFrame->GetHeight()*videoFrame->GetRowBytes(), (BYTE*)frameBytes);
 	if (FAILED(result))
 		goto bail;
 

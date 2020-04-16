@@ -27,17 +27,40 @@
 
 #pragma once
 
-#include <wincodec.h>
-#include <string>
-#include <queue>
 #include <stdint.h>
+#include <atomic>
+#include <vector>
 #include "DeckLinkAPI.h"
 
-namespace ImageWriter
+class Bgr24VideoFrame : public IDeckLinkVideoFrame
 {
-	HRESULT Initialize(void);
-	HRESULT UnInitialize(void);
+private:
+	long					m_width;
+	long					m_height;
+	BMDFrameFlags			m_flags;
+	std::vector<uint8_t>	m_pixelBuffer;
 
-	HRESULT GetNextFilenameWithPrefix(const std::string& path, const std::string& filenamePrefix, const std::string& imageFormat, std::string& nextFileName);
-	HRESULT WriteVideoFrameToImage(IDeckLinkVideoFrame* videoFrame, const std::string& imgFilename, const std::string& imageFormat);
+	std::atomic<uint32_t>	m_refCount;
+
+public:
+	Bgr24VideoFrame(long width, long height, BMDFrameFlags flags);
+	virtual ~Bgr24VideoFrame() {};
+
+	// IDeckLinkVideoFrame interface
+	virtual long			STDMETHODCALLTYPE	GetWidth(void)			{ return m_width; };
+	virtual long			STDMETHODCALLTYPE	GetHeight(void)			{ return m_height; };
+	virtual long			STDMETHODCALLTYPE	GetRowBytes(void)		{ return m_width * 3; };
+	virtual HRESULT			STDMETHODCALLTYPE	GetBytes(void** buffer);
+	virtual BMDFrameFlags	STDMETHODCALLTYPE	GetFlags(void)			{ return m_flags; };
+	virtual BMDPixelFormat	STDMETHODCALLTYPE	GetPixelFormat(void)	{ return bmdFormat8BitBGRA; };
+
+	// Dummy implementations of remaining methods in IDeckLinkVideoFrame
+	virtual HRESULT			STDMETHODCALLTYPE	GetAncillaryData(IDeckLinkVideoFrameAncillary** ancillary) { return E_NOTIMPL; };
+	virtual HRESULT			STDMETHODCALLTYPE	GetTimecode(BMDTimecodeFormat format, IDeckLinkTimecode** timecode) { return E_NOTIMPL;	};
+
+	// IUnknown interface
+	virtual HRESULT			STDMETHODCALLTYPE	QueryInterface(REFIID iid, LPVOID *ppv);
+	virtual ULONG			STDMETHODCALLTYPE	AddRef();
+	virtual ULONG			STDMETHODCALLTYPE	Release();
 };
+
