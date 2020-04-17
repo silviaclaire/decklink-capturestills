@@ -300,7 +300,8 @@ int main(int argc, char* argv[])
 	int							idx;
 	bool						supportsFormatDetection = false;
 
-	std::thread					captureStillsThread;
+	std::thread					captureStillsThread_1;
+	std::thread					captureStillsThread_2;
 	std::thread					keyPressThread;
 
 	IDeckLinkIterator*			deckLinkIterator		= NULL;
@@ -513,43 +514,58 @@ int main(int argc, char* argv[])
 		goto bail;
 	}
 
+	fprintf(stderr, "Starting Capture...\n");
+
 	// Start capturing
 	result = selectedDeckLinkInput->StartCapture(selectedDisplayMode, std::get<kPixelFormatValue>(kSupportedPixelFormats[pixelFormatIndex]), enableFormatDetection);
 	if (result != S_OK)
 		goto bail;
 
+	fprintf(stderr, "Sleeping for 20 seconds\n");
+	std::this_thread::sleep_for(std::chrono::seconds(10));
+
 	// Print the selected configuration
-	fprintf(stderr, "Capturing with the following configuration:\n"
-		" - Capture device: %s\n"
-		" - Video mode: %s\n"
-		" - Pixel format: %s\n"
-		" - Frames to capture: %d\n"
-		" - Capture interval: %d\n"
-		" - Filename prefix: %s\n"
-		" - Capture directory: %s\n",
-		selectedDeckLinkInput->GetDeviceName().c_str(),
-		selectedDisplayModeName.c_str(),
-		std::get<kPixelFormatString>(kSupportedPixelFormats[pixelFormatIndex]).c_str(),
-		framesToCapture,
-		captureInterval,
-		filenamePrefix.c_str(),
-		captureDirectory.c_str()
-		);
+	//fprintf(stderr, "Capturing with the following configuration:\n"
+	//	" - Capture device: %s\n"
+	//	" - Video mode: %s\n"
+	//	" - Pixel format: %s\n"
+	//	" - Frames to capture: %d\n"
+	//	" - Capture interval: %d\n"
+	//	" - Filename prefix: %s\n"
+	//	" - Capture directory: %s\n",
+	//	selectedDeckLinkInput->GetDeviceName().c_str(),
+	//	selectedDisplayModeName.c_str(),
+	//	std::get<kPixelFormatString>(kSupportedPixelFormats[pixelFormatIndex]).c_str(),
+	//	framesToCapture,
+	//	captureInterval,
+	//	filenamePrefix.c_str(),
+	//	captureDirectory.c_str()
+	//);
 
 	fprintf(stderr, "Starting capture, press <RETURN> to stop/exit\n");
 
 	// Start thread for capture processing
-	captureStillsThread = std::thread([&]{
+	captureStillsThread_1 = std::thread([&] {
 		CaptureStills(selectedDeckLinkInput, captureInterval, framesToCapture, captureDirectory, filenamePrefix);
 	});
 
-	keyPressThread = std::thread([&]{
+	captureStillsThread_2 = std::thread([&] {
+		CaptureStills(selectedDeckLinkInput, captureInterval, framesToCapture, captureDirectory, filenamePrefix);
+	});
+
+	keyPressThread = std::thread([&] {
 		getchar();
 		selectedDeckLinkInput->CancelCapture();
 	});
 
 	// Wait on return of main capture stills thread
-	captureStillsThread.join();
+	captureStillsThread_1.join();
+	captureStillsThread_2.join();
+
+	fprintf(stderr, "Sleeping for 20 seconds\n");
+	std::this_thread::sleep_for(std::chrono::seconds(10));
+	fprintf(stderr, "Stopping Capture...\n");
+
 	selectedDeckLinkInput->StopCapture();
 
 	keyPressThread.join();
