@@ -24,7 +24,7 @@
 ** DEALINGS IN THE SOFTWARE.
 ** -LICENSE-END-
 */
-// CaptureStills.cpp 
+// CaptureStills.cpp
 //
 
 #include <stdio.h>
@@ -65,7 +65,7 @@ void CaptureStills(DeckLinkInputDevice* deckLinkInput, const int captureInterval
 	int							captureFrameCount		= 0;
 	HRESULT						result					= S_OK;
 	bool						captureRunning			= true;
-	
+
 	IDeckLinkVideoFrame*		receivedVideoFrame		= NULL;
 	IDeckLinkVideoConversion*	deckLinkFrameConverter	= NULL;
 	IDeckLinkVideoFrame*		bgra32Frame				= NULL;
@@ -126,7 +126,7 @@ void CaptureStills(DeckLinkInputDevice* deckLinkInput, const int captureInterval
 				}
 
 				bgra32Frame->Release();
-				
+
 				if ((captureFrameCount / captureInterval) >= framesToCapture)
 				{
 					fprintf(stderr, "Completed Capture\n");
@@ -418,14 +418,14 @@ int main(int argc, char* argv[])
 
 				selectedDeckLinkInput = new DeckLinkInputDevice(deckLink);
 			}
-			
+
 			deckLinkAttributes->Release();
 		}
 
 		deckLink->Release();
 	}
 
-	// Get display modes from the selected decklink output 
+	// Get display modes from the selected decklink output
 	if (selectedDeckLinkInput != NULL)
 	{
 		result = selectedDeckLinkInput->Init();
@@ -488,7 +488,7 @@ int main(int argc, char* argv[])
 																					 &displayModeSupported);
 			if ((result != S_OK) || (!displayModeSupported))
 			{
-				fprintf(stderr, "Display mode %s with pixel format %s is not supported by device\n", 
+				fprintf(stderr, "Display mode %s with pixel format %s is not supported by device\n",
 					selectedDisplayModeName.c_str(),
 					std::get<kPixelFormatString>(kSupportedPixelFormats[pixelFormatIndex]).c_str()
 					);
@@ -547,7 +547,7 @@ int main(int argc, char* argv[])
 		getchar();
 		selectedDeckLinkInput->CancelCapture();
 	});
-	
+
 	// Wait on return of main capture stills thread
 	captureStillsThread.join();
 	selectedDeckLinkInput->StopCapture();
