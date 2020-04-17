@@ -552,6 +552,16 @@ int main(int argc, char* argv[])
 	captureStillsThread.join();
 	selectedDeckLinkInput->StopCapture();
 
+	// Restart capturing
+	result = selectedDeckLinkInput->StartCapture(selectedDisplayMode, std::get<kPixelFormatValue>(kSupportedPixelFormats[pixelFormatIndex]), enableFormatDetection);
+	if (result != S_OK)
+		goto bail;
+	captureStillsThread = std::thread([&]{
+		CaptureStills(selectedDeckLinkInput, captureInterval, framesToCapture, captureDirectory, filenamePrefix);
+	});
+	captureStillsThread.join();
+	selectedDeckLinkInput->StopCapture();
+
 	keyPressThread.join();
 
 	// All Okay.
